@@ -4,11 +4,12 @@
 library(tidyverse)
 library(fixest)
 library(modelsummary)
+library(here)
 
 # =========================================================================
 # 2. FPI Daten einlesen und aufbereiten
 # =========================================================================
-FPI <- read_csv("C:/Users/Maxwo/Desktop/Uni/SoSe_26/EWF/Essays/FPI.csv")
+FPI <- read_csv(here("data", "FPI.csv"))
 
 FPI_jahr <- FPI %>%
   filter(Year != 2014) %>%
@@ -30,7 +31,7 @@ FPI_bereinigt <- FPI_jahr %>%
 # =========================================================================
 # 3. Undernourishment Daten einlesen und aufbereiten
 # =========================================================================
-Undernourishment <- read_csv("C:/Users/Maxwo/Desktop/Uni/SoSe_26/EWF/Essays/Undernourishment.csv")
+Undernourishment <- read_csv(here("data", "Undernourishment.csv"))
 
 Undernourishment_bereinigt <- Undernourishment %>%
   select(
@@ -43,7 +44,7 @@ Undernourishment_bereinigt <- Undernourishment %>%
 # =========================================================================
 # 4. GDP Daten einlesen und aufbereiten
 # =========================================================================
-GDP <- read_csv("C:/Users/Maxwo/Desktop/Uni/SoSe_26/EWF/Essays/GDP.csv")
+GDP <- read_csv(here("data", "GDP.csv"))
 
 GDP_bereinigt <- GDP %>%
   rename(Country = Area, GDP = Value) %>%
@@ -53,7 +54,7 @@ GDP_bereinigt <- GDP %>%
 # 5. Staatsausgaben (Expenditure) einlesen und aufbereiten
 # =========================================================================
 
-FAOSTAT_data_expenditure <- read_csv("C:/Users/Maxwo/Desktop/Uni/SoSe_26/EWF/Essays/Essay new Juli/FAOSTAT_data_expenditure.csv")
+FAOSTAT_data_expenditure <- read_csv(here("data", "gov_expenditure.csv"))
 
 expenditure_bereinigt <- FAOSTAT_data_expenditure %>%
   rename(Country = Area, gov_exp = Value) %>%
