@@ -120,3 +120,10 @@ modelsummary(
   stars = TRUE,
   notes = "Standard errors are reported in parentheses. Column 4 standard errors are clustered at the country level."
 )
+
+modelsummary(
+  models,
+  output = "markdown",
+  stars = TRUE,
+  gof_map = c("nobs", "r.squared", "adj.r.squared")
+)
