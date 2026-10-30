@@ -21,3 +21,9 @@ Time-invariant institutional characteristics, such as geographic climate stabili
 ## Econometric Methodology
 
 The baseline specification relies on a two-way fixed effects (TWFE) panel model:
+Controlling for...
+  country fixed effects, i.e. time-constant unobserved heterogeneity
+  year fixed effects, i.e. time-variant trends like macroeconomic shocks 
+Standard errors are clustered at the country level to account for serial correlation.
+  
+
