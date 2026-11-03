@@ -118,3 +118,33 @@ modelsummary(
   stars = TRUE,
   gof_map = c("nobs", "r.squared", "adj.r.squared")
 )
+
+
+p <- modelplot(
+  models,
+  coef_map = c("FPI_lag1" = "Food Price Inflation (t-1)")
+) +
+  
+  geom_vline(xintercept = 0, linetype = "dashed", color = "firebrick", linewidth = 0.8) +
+  labs(
+    title = "Effect of Food Price Inflation on Undernourishment",
+    subtitle = "Point estimates with 95% confidence intervals across model specifications",
+    x = "Estimated Coefficient (Percentage Points)",
+    y = ""
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    legend.position = "none",
+    panel.grid.minor = element_blank()
+  )
+
+ggsave(
+  filename = here("output", "model_results.png"),
+  plot     = p,
+  width    = 8,
+  height   = 3.5,
+  dpi      = 300
+)
+
+
