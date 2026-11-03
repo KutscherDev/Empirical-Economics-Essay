@@ -12,21 +12,12 @@ library(here)
 FPI <- read_csv(here("data", "FPI.csv"))
 
 FPI_jahr <- FPI %>%
-  filter(Year != 2014) %>%
   group_by(Area, Year) %>%
   summarise(Annual_FPI = mean(Value, na.rm = TRUE), .groups = "drop") %>%
   rename(
     Country = Area,
-    `FPI percentage` = Annual_FPI
+    FPI_pct = Annual_FPI
   )
-
-laender_unvollstaendig <- FPI_jahr %>%
-  group_by(Country) %>%
-  summarise(Anzahl_Jahre = n(), .groups = "drop") %>%
-  filter(Anzahl_Jahre != 10)
-
-FPI_bereinigt <- FPI_jahr %>%
-  anti_join(laender_unvollstaendig, by = "Country")
 
 # =========================================================================
 # 3. Undernourishment Daten einlesen und aufbereiten
@@ -61,47 +52,46 @@ expenditure_bereinigt <- FAOSTAT_data_expenditure %>%
   select(Country, Year, gov_exp)
 
 # =========================================================================
-# 6. Datensätze zusammenführen & Ausreißer filtern
+# 6. Datensätze zusammenführen 
 # =========================================================================
-main_complete <- FPI_bereinigt %>% 
+all_variables <- FPI_jahr %>% 
   inner_join(Undernourishment_bereinigt, by = c("Country", "Year")) %>%
   select(-Unit) %>%
   rename(Undernourishment = Value) %>%
   inner_join(GDP_bereinigt, by = c("Country", "Year")) %>% 
-  left_join(expenditure_bereinigt, by = c("Country", "Year")) %>% 
-  filter(!Country %in% c("South Sudan", "Sudan", "Haiti", "Malawi"))
+  left_join(expenditure_bereinigt, by = c("Country", "Year"))
 
-# Runden der numerischen Werte
-main_complete$GDP <- round(main_complete$GDP, digits = 2)
-main_complete$`FPI percentage` <- round(main_complete$`FPI percentage`, digits = 2)
 
 # =========================================================================
-# 7. Panel-Struktur & Lags erstellen
+# 7. Panel-Struktur
 # =========================================================================
-main_test <- main_complete %>%
+
+df_lagged <- all_variables %>%
+  rename(PoU = Undernourishment, FPI = FPI_pct) %>%
   group_by(Country) %>%
+  # Stellt sicher, dass kein Kalenderjahr übersprungen wird:
+  complete(Year = full_seq(Year, 1)) %>%
   arrange(Year, .by_group = TRUE) %>%
   mutate(
-    FPI_lag1 = lag(`FPI percentage`, n = 1),
-    GDP_lag1 = lag(GDP, n = 1),
-    gov_exp_lag1 = lag(gov_exp, n = 1)
+    FPI_lag1     = lag(FPI, 1),
+    GDP_lag1     = lag(GDP, 1),
+    gov_exp_lag1 = lag(gov_exp, 1)
   ) %>%
-  ungroup() %>%
-  rename(
-    PoU = Undernourishment,
-    FPI = `FPI percentage`
-  )
+  ungroup()
+
+df_final <- df_lagged %>%
+  drop_na(PoU, FPI_lag1, GDP_lag1, gov_exp_lag1)
 
 # =========================================================================
 # 8. Regressionsmodelle 
 # =========================================================================
-model1 <- lm(PoU ~ FPI_lag1, data = main_test) 
-model2 <- lm(PoU ~ FPI_lag1 + log(GDP_lag1), data = main_test)
-model3 <- lm(PoU ~ FPI_lag1 + log(GDP_lag1) + log(gov_exp_lag1), data = main_test)
 
-# Fixed Effects Modell (Länder- und Zeit-Fixeffekte)
-fe_model <- feols(PoU ~ FPI_lag1 + log(GDP_lag1) + log(gov_exp_lag1) | Country + Year, 
-                  data = main_test)
+model1 <- feols(PoU ~ FPI_lag1, data = df_final, vcov = ~Country)
+model2 <- feols(PoU ~ FPI_lag1 + log(GDP_lag1), data = df_final, vcov = ~Country)
+model3 <- feols(PoU ~ FPI_lag1 + log(GDP_lag1) + log(gov_exp_lag1), data = df_final, vcov = ~Country)
+
+#Finale OLS inklusive fixed effects auf Länder- und Zeitebene
+fe_model <- feols(PoU ~ FPI_lag1 + log(GDP_lag1) + log(gov_exp_lag1) | Country + Year, data = df_final, vcov = ~Country)
 
 # =========================================================================
 # 9. Finale HTML-Tabelle 
@@ -115,14 +105,15 @@ models <- list(
 
 modelsummary(
   models, 
-  vcov = list("iid", "iid", "iid", ~Country), 
-  output = "my_regression_table.html", 
+  vcov = ~Country, 
+  output = here("output", "my_regression_table.html"),
   stars = TRUE,
-  notes = "Standard errors are reported in parentheses. Column 4 standard errors are clustered at the country level."
+  notes = "Standard errors are clustered at the country level and reported in parentheses."
 )
 
 modelsummary(
   models,
+  vcov = ~Country, 
   output = "markdown",
   stars = TRUE,
   gof_map = c("nobs", "r.squared", "adj.r.squared")
